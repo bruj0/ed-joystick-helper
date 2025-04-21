@@ -15,12 +15,62 @@ This utility can be considered a breach of TOS for some games, please make sure 
 - Can execute pre-run and post-run functions
 - Includes a helper to identify joystick buttons and keyboard keys
 - Configuration via INI file or Python dictionary
+- Runs in the system tray with options to reload configuration and exit
+- 
+### Power Configuration Presets (PIPS)
+
+The default configuration is set up for Elite Dangerous
+
+* Combat 1SYS/1ENG/4WEP
+* Shields 4SYS/2ENG
+* Persuit 2ENG/4WEP
+* Offense 3SYS/1ENG/3WEP
+
+## Command-Line Options
+
+The application supports several command-line options:
+
+```
+-h, --help                       Show the help message and exit
+--joystick-events                Monitor and display joystick button events
+--keyboard-events                Monitor and display keyboard events
+--config FILE                    Specify a custom configuration file path
+--create-config                  Create a default configuration file
+--no-tray                        Run in console mode without system tray icon
+--console                        Run in console mode (not in background)
+--background                     Detach the application to run in the background (Windows only)
+```
+
+### Running in the Background
+
+To run the application fully detached from the console (in the background) on Windows, use:
+
+```bash
+python main.py --background
+```
+
+This will start the tray application and immediately return you to the command prompt. The application will continue running in the background with a system tray icon.
+
+Note: The `--background` option is only supported on Windows.
+
+## System Tray Features
+
+By default, the application now runs in the background with a system tray icon. This provides:
+
+- Minimal footprint: The application runs silently in the background
+- Easy access: Right-click on the system tray icon to access options
+- Reload configuration: Update your settings without restarting the application
+- Clean exit: Properly shutdown the application when you're done
+
+To disable the system tray and run in the traditional console mode, use the `--no-tray` option:
 
 ## Installation
 
 ### Direct Download
 
-You can download the latest pre-built Windows executable from the [GitHub Releases page](https://github.com/bruj0/ed-joystick-helper/releases). Simply download the ZIP file, extract it, and run the executable.
+You can download the latest pre-built Windows executable from the [GitHub Releases page](https://github.com/bruj0/ed-joystick-helper/releases). 
+Simply download the ZIP file, extract it, and run the executable.
+You can see how it was created in the [Action tab](https://github.com/bruj0/ed-joystick-helper/actions/runs/14579316113/job/40892291548)
 
 ### Prerequisites for running with Python executable
 
@@ -90,16 +140,16 @@ You can configure the application using an INI file. Here's an example of the de
 
 ```ini
 [HAT_0_up]
-sequence = {'v': 1, 'x': 2}
+sequence = [{"key": "v", "presses": 1}, {"key": "x", "presses": 2}]
 
 [HAT_0_down]
-sequence = {'v': 1, 'c': 2}
+sequence = [{"key": "v", "presses": 1}, {"key": "c", "presses": 2}]
 
 [HAT_0_left]
-sequence = {'v': 1, 'z': 1, 'x': 1}
+sequence = [{"key": "v", "presses": 1}, {"key": "z", "presses": 1}, {"key": "x", "presses": 1}]
 
 [HAT_0_right]
-sequence = {'v': 1, 'c': 1, 'x': 1}
+sequence = [{"key": "v", "presses": 1}, {"key": "c", "presses": 1}, {"key": "x", "presses": 1}]
 ```
 
 ### Power Configuration Presets (PIPS)
@@ -127,11 +177,11 @@ config = {
     'BUTTON_29': {
         'modifier': 'BUTTON_23',  # Only triggered if both buttons are pressed
         'delay': 0.5,  # delay between key presses
-        'sequence': {
-            'KEY_UP': 3,  # Press Up Arrow 3 times
-            'KEY_DOWN': 1,  # Press Down Arrow 1 time
-            'WAIT': 1.5,  # Wait 1.5 seconds
-        },
+        'sequence': [
+            {"key": "KEY_UP", "presses": 3},  # Press Up Arrow 3 times
+            {"key": "KEY_DOWN", "presses": 1},  # Press Down Arrow 1 time
+            {"key": "WAIT", "presses": 1.5},  # Wait 1.5 seconds
+        ],
         'preRun': print_starting,  # Function to call before sequence
         'afterRun': print_end,  # Function to call after sequence
     }
