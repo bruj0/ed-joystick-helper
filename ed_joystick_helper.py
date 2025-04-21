@@ -6,6 +6,7 @@ Elite Dangerous Joystick Helper - Maps joystick button presses to keyboard seque
 import time
 import threading
 import pygame
+import logging
 from pynput.keyboard import Key, Controller
 
 
@@ -22,6 +23,17 @@ class EDJoystickHelper:
         self.running = False
         self.pressed_buttons = set()
         self.current_hat_positions = {}  # Track current hat positions
+        self.config_file_path = None  # Store config file path for reloading
+        
+        # Set up logging
+        self.logger = logging.getLogger("ED_Joystick_Helper")
+        if not self.logger.handlers:
+            # Only configure if not already configured
+            handler = logging.FileHandler("ed_joystick_helper.log")
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(logging.INFO)
 
         # Initialize pygame for joystick support
         pygame.init()
@@ -33,7 +45,7 @@ class EDJoystickHelper:
         # Get the number of joysticks
         joystick_count = pygame.joystick.get_count()
         if joystick_count == 0:
-            print("No joysticks found!")
+            self.logger.warning("No joysticks found!")
             return
 
         # Initialize all joysticks
@@ -42,14 +54,14 @@ class EDJoystickHelper:
             joystick = pygame.joystick.Joystick(i)
             joystick.init()
             self.joysticks.append(joystick)
-            print(f"Initialized {joystick.get_name()}")
+            self.logger.info(f"Initialized {joystick.get_name()}")
             # Initialize hat positions to centered
             for hat_id in range(joystick.get_numhats()):
                 self.current_hat_positions[f"HAT_{hat_id}"] = "centered"
 
     def _execute_sequence(self, button_name, button_config):
         """Execute a sequence of keypresses for a button"""
-        print(f"Executing sequence for {button_name}")
+        self.logger.info(f"Executing sequence for {button_name}")
 
         # Call preRun function if defined
         if "preRun" in button_config and callable(button_config["preRun"]):
@@ -58,7 +70,10 @@ class EDJoystickHelper:
         sequence = button_config["sequence"]
         delay = button_config.get("delay", 0.1)
 
-        for key, presses in sequence.items():
+        for item in sequence:
+            key = item["key"]
+            presses = item["presses"]
+            
             if key == "WAIT":
                 # Special case for wait command
                 time.sleep(presses)
@@ -69,7 +84,7 @@ class EDJoystickHelper:
 
             # Press the key the specified number of times
             for _ in range(presses):
-                print(f"Pressing {key_obj} ({_ + 1}/{presses})")
+                self.logger.debug(f"Pressing {key_obj} ({_ + 1}/{presses})")
                 self.keyboard.press(key_obj)
                 time.sleep(delay)
                 self.keyboard.release(key_obj)
@@ -92,7 +107,7 @@ class EDJoystickHelper:
 
     def _process_button_press(self, button_name):
         """Process a button press, checking modifiers and executing sequences"""
-        print(f"Button pressed: {button_name}")
+        self.logger.info(f"Button pressed: {button_name}")
         if button_name in self.config:
             button_config = self.config[button_name]
 
@@ -140,17 +155,37 @@ class EDJoystickHelper:
             # Process the hat event if it's in the config
             self._process_button_press(hat_event)
 
+    def set_config_file_path(self, file_path):
+        """Store the config file path for reloading"""
+        self.config_file_path = file_path
+
+    def reload_config(self):
+        """Reload configuration from the stored file path"""
+        if not self.config_file_path:
+            self.logger.error("No configuration file path set, cannot reload.")
+            return False
+
+        try:
+            # Import here to avoid circular imports
+            from main import load_config_from_ini
+            new_config = load_config_from_ini(self.config_file_path)
+            self.config = new_config
+            self.logger.info(f"Configuration reloaded from {self.config_file_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error reloading configuration: {e}")
+            return False
+
     def start(self):
         """Start listening for joystick events"""
         self.running = True
-        print("Starting Elite Dangerous Joystick Helper...")
-        print("Press Ctrl+C to quit")
+        self.logger.info("Starting Elite Dangerous Joystick Helper...")
 
         try:
             # Main event loop
             while self.running:
                 for event in pygame.event.get():
-                    # print(f"Event: {event}")
+                    # self.logger.debug(f"Event: {event}")
                     if event.type == pygame.JOYBUTTONDOWN:
                         button_name = f"BUTTON_{event.button}"
                         self.pressed_buttons.add(button_name)
@@ -168,7 +203,7 @@ class EDJoystickHelper:
                         key_id = (
                             f"KEY_{key_name.upper()}" if len(key_name) > 1 else key_name
                         )
-                        print(f"Key pressed: {key_id}")
+                        self.logger.info(f"Key pressed: {key_id}")
                         # Process the key press as if it were a button
                         self._process_button_press(key_id)
                     elif event.type == pygame.KEYUP:
@@ -181,7 +216,7 @@ class EDJoystickHelper:
 
                 time.sleep(0.01)  # Small sleep to prevent CPU spinning
         except KeyboardInterrupt:
-            print("\nStopping Elite Dangerous Joystick Helper...")
+            self.logger.info("Stopping Elite Dangerous Joystick Helper...")
         finally:
             pygame.quit()
 
@@ -192,6 +227,15 @@ class EDJoystickHelper:
 
 def print_joystick_events():
     """Print information about connected joysticks and monitor joystick button presses"""
+    # Set up logging
+    logger = logging.getLogger("ED_Joystick_Helper")
+    if not logger.handlers:
+        logging.basicConfig(
+            filename="ed_joystick_helper.log",
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+    
     pygame.init()
     pygame.joystick.init()
 
@@ -201,7 +245,7 @@ def print_joystick_events():
     # Get the number of joysticks
     joystick_count = pygame.joystick.get_count()
     if joystick_count == 0:
-        print("No joysticks found!")
+        logger.warning("No joysticks found!")
         return
 
     # Initialize all joysticks
@@ -210,21 +254,21 @@ def print_joystick_events():
         joystick = pygame.joystick.Joystick(i)
         joystick.init()
         joysticks.append(joystick)
-        print(f"Found {joystick.get_name()}")
-        print(f"Number of buttons: {joystick.get_numbuttons()}")
-        print(f"Number of axes: {joystick.get_numaxes()}")
-        print(f"Number of hats: {joystick.get_numhats()}")
+        logger.info(f"Found {joystick.get_name()}")
+        logger.info(f"Number of buttons: {joystick.get_numbuttons()}")
+        logger.info(f"Number of axes: {joystick.get_numaxes()}")
+        logger.info(f"Number of hats: {joystick.get_numhats()}")
 
-    print("\nListening for joystick button presses. Press Ctrl+C to quit...")
+    logger.info("Listening for joystick button presses...")
 
     try:
         # Main event loop
         while True:
             for event in pygame.event.get():
-                print(f"Event: {event}")  # Uncomment to see all events for debugging
+                # logger.debug(f"Event: {event}")  # Uncomment to see all events for debugging
                 if event.type == pygame.JOYBUTTONDOWN:
                     button_name = f"BUTTON_{event.button}"
-                    print(f"Button pressed: {button_name}")
+                    logger.info(f"Button pressed: {button_name}")
                 elif event.type == pygame.JOYHATMOTION:
                     hat_id = event.hat
                     x_value, y_value = event.value
@@ -249,20 +293,29 @@ def print_joystick_events():
                         direction = "up-left"
 
                     hat_name = f"HAT_{hat_id}"
-                    print(
+                    logger.info(
                         f"Hat moved: {hat_name}, "
                         f"Position: {direction} ({x_value}, {y_value})"
                     )
 
             time.sleep(0.01)  # Small sleep to prevent CPU spinning
     except KeyboardInterrupt:
-        print("\nExiting...")
+        logger.info("Exiting...")
     finally:
         pygame.quit()
 
 
 def print_keyboard_events():
     """Monitor and print information about keyboard events for configuration"""
+    # Set up logging
+    logger = logging.getLogger("ED_Joystick_Helper")
+    if not logger.handlers:
+        logging.basicConfig(
+            filename="ed_joystick_helper.log",
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+    
     pygame.init()
     pygame.joystick.init()
 
@@ -273,10 +326,10 @@ def print_keyboard_events():
     # Enable keyboard events explicitly
     pygame.event.set_allowed([pygame.KEYDOWN, pygame.KEYUP])
 
-    print("\nListening for key presses. Press Ctrl+C to quit...")
-    print("Key names can be used in your configuration:")
-    print(" - Regular keys: Use the character (e.g., 'a', '1', '#')")
-    print(" - Special keys: Use 'KEY_' prefix (e.g., 'KEY_SPACE', 'KEY_F1')")
+    logger.info("Listening for key presses...")
+    logger.info("Key names can be used in your configuration:")
+    logger.info(" - Regular keys: Use the character (e.g., 'a', '1', '#')")
+    logger.info(" - Special keys: Use 'KEY_' prefix (e.g., 'KEY_SPACE', 'KEY_F1')")
 
     try:
         # Main event loop
@@ -285,12 +338,12 @@ def print_keyboard_events():
                 if event.type == pygame.KEYDOWN:
                     key_name = pygame.key.name(event.key)
                     if key_name == " ":
-                        print("Key pressed: 'SPACE' - Config as: KEY_SPACE")
+                        logger.info("Key pressed: 'SPACE' - Config as: KEY_SPACE")
                     elif len(key_name) == 1:
-                        print(f"Key pressed: '{key_name}' - Config as: {key_name}")
+                        logger.info(f"Key pressed: '{key_name}' - Config as: {key_name}")
                     else:
                         key_upper = key_name.upper()
-                        print(
+                        logger.info(
                             f"Key pressed: '{key_name}' - "
                             f"Config as: KEY_{key_upper}"
                         )
@@ -301,18 +354,18 @@ def print_keyboard_events():
                     key_attr = key_name.lower()
                     if hasattr(Key, key_attr):
                         pynput_key = f"KEY_{key_upper}"
-                        print(
+                        logger.info(
                             f"  This is a special key - "
                             f"Confirmed mapping: {pynput_key}"
                         )
                 # Also handle window close event
                 elif event.type == pygame.QUIT:
-                    print("\nWindow closed, exiting...")
+                    logger.info("Window closed, exiting...")
                     return
 
             pygame.display.flip()  # Update the display
             time.sleep(0.01)  # Small sleep to prevent CPU spinning
     except KeyboardInterrupt:
-        print("\nExiting...")
+        logger.info("Exiting...")
     finally:
         pygame.quit()

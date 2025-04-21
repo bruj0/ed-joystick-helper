@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "pillow>=11.2.1",
     "pygame>=2.6.1",
     "pynput>=1.8.1",
+    "pystray>=0.19.5",
 ]
