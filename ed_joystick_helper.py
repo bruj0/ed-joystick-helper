@@ -24,16 +24,18 @@ class EDJoystickHelper:
         self.pressed_buttons = set()
         self.current_hat_positions = {}  # Track current hat positions
         self.config_file_path = None  # Store config file path for reloading
-        
+
         # Set up logging
         self.logger = logging.getLogger("ED_Joystick_Helper")
         if not self.logger.handlers:
             # Only configure if not already configured
             handler = logging.FileHandler("ed_joystick_helper.log")
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+            self.logger.setLevel(logging.DEBUG)
 
         # Initialize pygame for joystick support
         pygame.init()
@@ -73,7 +75,7 @@ class EDJoystickHelper:
         for item in sequence:
             key = item["key"]
             presses = item["presses"]
-            
+
             if key == "WAIT":
                 # Special case for wait command
                 time.sleep(presses)
@@ -105,11 +107,15 @@ class EDJoystickHelper:
         # Otherwise, assume it's a character
         return key_name
 
-    def _process_button_press(self, button_name):
-        """Process a button press, checking modifiers and executing sequences"""
-        self.logger.info(f"Button pressed: {button_name}")
-        if button_name in self.config:
-            button_config = self.config[button_name]
+    def _process_button_press(self, button_name, joy_id=None):
+        """Process a button press, checking modifiers and executing sequences. Supports multiple joysticks with same button name."""
+        # If joy_id is provided, use extended button name
+        config_key = button_name
+        if joy_id is not None:
+            config_key = f"{button_name}_JOY{joy_id}"
+        self.logger.debug(f"Button pressed: {config_key}")
+        if config_key in self.config:
+            button_config = self.config[config_key]
 
             # Check if this button requires a modifier
             if "modifier" in button_config:
@@ -119,11 +125,11 @@ class EDJoystickHelper:
 
             # Execute the sequence in a separate thread to not block the event loop
             threading.Thread(
-                target=self._execute_sequence, args=(button_name, button_config)
+                target=self._execute_sequence, args=(config_key, button_config)
             ).start()
 
-    def _process_hat_event(self, hat_id, x_value, y_value):
-        """Process a HAT event, converting it to a direction and triggering actions"""
+    def _process_hat_event(self, hat_id, x_value, y_value, joy_id=None):
+        """Process a HAT event, converting it to a direction and triggering actions. Supports multiple joysticks."""
         # Map hat position to direction
         direction = "centered"
         if x_value == 0 and y_value == 1:
@@ -144,9 +150,11 @@ class EDJoystickHelper:
             direction = "up-left"
 
         hat_name = f"HAT_{hat_id}"
+        if joy_id is not None:
+            hat_name = f"{hat_name}_JOY{joy_id}"
 
         # Only process if the direction has changed
-        if self.current_hat_positions[hat_name] != direction:
+        if self.current_hat_positions.get(hat_name, None) != direction:
             self.current_hat_positions[hat_name] = direction
 
             # Create a hat event identifier that includes the direction
@@ -168,6 +176,7 @@ class EDJoystickHelper:
         try:
             # Import here to avoid circular imports
             from main import load_config_from_ini
+
             new_config = load_config_from_ini(self.config_file_path)
             self.config = new_config
             self.logger.info(f"Configuration reloaded from {self.config_file_path}")
@@ -188,16 +197,20 @@ class EDJoystickHelper:
                     # self.logger.debug(f"Event: {event}")
                     if event.type == pygame.JOYBUTTONDOWN:
                         button_name = f"BUTTON_{event.button}"
-                        self.pressed_buttons.add(button_name)
-                        self._process_button_press(button_name)
+                        joy_id = event.joy if hasattr(event, 'joy') else 0
+                        self.pressed_buttons.add(f"{button_name}_JOY{joy_id}")
+                        self._process_button_press(button_name, joy_id)
                     elif event.type == pygame.JOYBUTTONUP:
                         button_name = f"BUTTON_{event.button}"
-                        if button_name in self.pressed_buttons:
-                            self.pressed_buttons.remove(button_name)
+                        joy_id = event.joy if hasattr(event, 'joy') else 0
+                        pressed_name = f"{button_name}_JOY{joy_id}"
+                        if pressed_name in self.pressed_buttons:
+                            self.pressed_buttons.remove(pressed_name)
                     elif event.type == pygame.JOYHATMOTION:
                         hat_id = event.hat
                         x_value, y_value = event.value
-                        self._process_hat_event(hat_id, x_value, y_value)
+                        joy_id = event.joy if hasattr(event, 'joy') else 0
+                        self._process_hat_event(hat_id, x_value, y_value, joy_id)
                     elif event.type == pygame.KEYDOWN:
                         key_name = pygame.key.name(event.key)
                         key_id = (
@@ -233,14 +246,16 @@ def print_joystick_events():
         logging.basicConfig(
             filename="ed_joystick_helper.log",
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
-    
+
     pygame.init()
     pygame.joystick.init()
 
     # Enable joystick events
-    pygame.event.set_allowed([pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION])
+    pygame.event.set_allowed(
+        [pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION]
+    )
 
     # Get the number of joysticks
     joystick_count = pygame.joystick.get_count()
@@ -268,10 +283,12 @@ def print_joystick_events():
                 # logger.debug(f"Event: {event}")  # Uncomment to see all events for debugging
                 if event.type == pygame.JOYBUTTONDOWN:
                     button_name = f"BUTTON_{event.button}"
-                    logger.info(f"Button pressed: {button_name}")
+                    joy_id = event.joy if hasattr(event, 'joy') else 0
+                    logger.info(f"Button pressed: {button_name}_JOY{joy_id}")
                 elif event.type == pygame.JOYHATMOTION:
                     hat_id = event.hat
                     x_value, y_value = event.value
+                    joy_id = event.joy if hasattr(event, 'joy') else 0
                     direction = "centered"
 
                     # Map hat position to direction
@@ -292,7 +309,7 @@ def print_joystick_events():
                     elif x_value == -1 and y_value == 1:
                         direction = "up-left"
 
-                    hat_name = f"HAT_{hat_id}"
+                    hat_name = f"HAT_{hat_id}_JOY{joy_id}"
                     logger.info(
                         f"Hat moved: {hat_name}, "
                         f"Position: {direction} ({x_value}, {y_value})"
@@ -313,9 +330,9 @@ def print_keyboard_events():
         logging.basicConfig(
             filename="ed_joystick_helper.log",
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
-    
+
     pygame.init()
     pygame.joystick.init()
 
@@ -340,7 +357,9 @@ def print_keyboard_events():
                     if key_name == " ":
                         logger.info("Key pressed: 'SPACE' - Config as: KEY_SPACE")
                     elif len(key_name) == 1:
-                        logger.info(f"Key pressed: '{key_name}' - Config as: {key_name}")
+                        logger.info(
+                            f"Key pressed: '{key_name}' - Config as: {key_name}"
+                        )
                     else:
                         key_upper = key_name.upper()
                         logger.info(

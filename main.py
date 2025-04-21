@@ -21,29 +21,29 @@ from ed_joystick_tray import EDJoystickTray
 def setup_normal_logging():
     """Set up logging to file"""
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    logger = logging.getLogger("ED_Joystick_Helper")
+    logger = logging.getLogger("main")
     return logger
 
 
 def print_starting(caller):
     """Example pre-run function"""
-    logger = logging.getLogger("ED_Joystick_Helper")
+    logger = logging.getLogger("main")
     logger.info(f"Sequence for {caller} started")
 
 
 def print_end(caller):
     """Example after-run function"""
-    logger = logging.getLogger("ED_Joystick_Helper")
+    logger = logging.getLogger("main")
     logger.info(f"Sequence for {caller} ended")
 
 
 def load_config_from_ini(file_path):
     """Load configuration from an INI file"""
-    logger = logging.getLogger("ED_Joystick_Helper")
+    logger = logging.getLogger("main")
     config = configparser.ConfigParser()
     if not os.path.exists(file_path):
         logger.error(f"Configuration file {file_path} not found.")
@@ -88,7 +88,7 @@ def load_config_from_ini(file_path):
 
 def create_default_config_file(file_path, config_dict):
     """Create a default INI configuration file"""
-    logger = logging.getLogger("ED_Joystick_Helper")
+    logger = logging.getLogger("main")
     config = configparser.ConfigParser()
 
     for button, settings in config_dict.items():
@@ -116,21 +116,21 @@ def create_default_config_file(file_path, config_dict):
 
 
 default_config = {
-    "HAT_0_up": {
+    "HAT_0_JOY0_up": {
         # Combat 1SYS/1ENG/4WEP
         "sequence": [
             {"key": "v", "presses": 1},  # Reset PIPS
             {"key": "x", "presses": 2},  # 4WEP
         ]
     },
-    "HAT_0_down": {
+    "HAT_0_JOY0_down": {
         # Shields 4SYS/2ENG
         "sequence": [
             {"key": "v", "presses": 1}, 
             {"key": "c", "presses": 2}  # 4SYS
         ]
     },
-    "HAT_0_left": {
+    "HAT_0_JOY0_left": {
         # Persuit 2ENG/4WEP
         "sequence": [
             {"key": "v", "presses": 1}, 
@@ -139,7 +139,7 @@ default_config = {
         ]
     },
     # Offense 3SYS/1ENG/3WEP
-    "HAT_0_right": {
+    "HAT_0_JOY0_right": {
         "sequence": [
             {"key": "v", "presses": 1},
             {"key": "c", "presses": 1},  # 3SYS

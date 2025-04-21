@@ -9,6 +9,7 @@ This utility can be considered a breach of TOS for some games, please make sure 
 ## Features
 
 - Maps joystick buttons and hat directions to keyboard sequences
+- Supports multiple joysticks and controllers simultaneously
 - Supports modifier buttons (combinations)
 - Configurable delays between key presses
 - Supports special wait commands in sequences
@@ -16,7 +17,7 @@ This utility can be considered a breach of TOS for some games, please make sure 
 - Includes a helper to identify joystick buttons and keyboard keys
 - Configuration via INI file or Python dictionary
 - Runs in the system tray with options to reload configuration and exit
-- 
+
 ### Power Configuration Presets (PIPS)
 
 The default configuration is set up for Elite Dangerous
@@ -76,7 +77,7 @@ You can see how it was created in the [Action tab](https://github.com/bruj0/ed-j
 
 - Python 3.6+
 - Windows operating system
-- A joystick or controller
+- One or more joysticks or controllers
 - Elite Dangerous game (optional, but that's what it's designed for)
 
 ### Setup
@@ -116,13 +117,13 @@ This will create a `config.ini` file with the default PIPS (Power Distribution) 
 
 ### Identifying Joystick Buttons
 
-To see which buttons on your controller correspond to which button IDs:
+To see which buttons on your controller correspond to which button IDs (including support for multiple joysticks):
 
 ```bash
 python main.py --joystick-events
 ```
 
-Press buttons on your joystick or move the hat to see the output. Use these names in your configuration.
+Press buttons on your joystick(s) or move the hat to see the output. The output will indicate both the button/hat and the joystick index (e.g., `BUTTON_0_JOY0`, `HAT_0_JOY1_up`). Use these names in your configuration to assign actions to specific devices.
 
 ### Identifying Keyboard Keys
 
@@ -136,21 +137,23 @@ Press keys on your keyboard to see their names. Use these names in your configur
 
 ## Configuration
 
-You can configure the application using an INI file. Here's an example of the default configuration for Elite Dangerous power management:
+You can configure the application using an INI file. Here's an example of the default configuration for Elite Dangerous power management (for the first joystick):
 
 ```ini
-[HAT_0_up]
+[HAT_0_JOY0_up]
 sequence = [{"key": "v", "presses": 1}, {"key": "x", "presses": 2}]
 
-[HAT_0_down]
+[HAT_0_JOY0_down]
 sequence = [{"key": "v", "presses": 1}, {"key": "c", "presses": 2}]
 
-[HAT_0_left]
+[HAT_0_JOY0_left]
 sequence = [{"key": "v", "presses": 1}, {"key": "z", "presses": 1}, {"key": "x", "presses": 1}]
 
-[HAT_0_right]
+[HAT_0_JOY0_right]
 sequence = [{"key": "v", "presses": 1}, {"key": "c", "presses": 1}, {"key": "x", "presses": 1}]
 ```
+
+To configure actions for additional joysticks, use the appropriate joystick index in the section name (e.g., `[BUTTON_5_JOY1]`).
 
 ### Power Configuration Presets (PIPS)
 
