@@ -18,7 +18,11 @@ This utility can be considered a breach of TOS for some games, please make sure 
 
 ## Installation
 
-### Prerequisites
+### Direct Download
+
+You can download the latest pre-built Windows executable from the [GitHub Releases page](https://github.com/bruj0/ed-joystick-helper/releases). Simply download the ZIP file, extract it, and run the executable.
+
+### Prerequisites for running with Python executable
 
 - Python 3.6+
 - Windows operating system
