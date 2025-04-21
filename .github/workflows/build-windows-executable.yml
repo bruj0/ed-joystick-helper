@@ -1,0 +1,42 @@
+name: Build Windows Executable on Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+          
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller --onefile --add-data "config.ini;." --name ed-joystick-helper main.py
+          
+      - name: Zip the executable
+        run: |
+          cd dist
+          Compress-Archive -Path ed-joystick-helper.exe -DestinationPath ed-joystick-helper-windows.zip
+          
+      - name: Upload executable to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/ed-joystick-helper.exe
+            dist/ed-joystick-helper-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
